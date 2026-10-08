@@ -1,0 +1,62 @@
+{
+  "n_train": 242,
+  "n_test": 61,
+  "targets": {
+    "Cath": {
+      "threshold": 0.48,
+      "accuracy": 0.8688524590163934,
+      "f1": 0.9130434782608695,
+      "precision": 0.8571428571428571,
+      "recall": 0.9767441860465116,
+      "roc_auc": 0.8733850129198967,
+      "cv_accuracy_train": 0.8760330578512396,
+      "model": "CalibratedClassifierCV",
+      "accuracy_95ci": [
+        0.784,
+        0.954
+      ]
+    },
+    "LAD": {
+      "threshold": 0.4,
+      "accuracy": 0.7213114754098361,
+      "f1": 0.7901234567901234,
+      "precision": 0.6808510638297872,
+      "recall": 0.9411764705882353,
+      "roc_auc": 0.7984749455337692,
+      "cv_accuracy_train": 0.7892561983471075,
+      "model": "CalibratedClassifierCV",
+      "accuracy_95ci": [
+        0.609,
+        0.834
+      ]
+    },
+    "LCX": {
+      "threshold": 0.32,
+      "accuracy": 0.5901639344262295,
+      "f1": 0.6153846153846154,
+      "precision": 0.5128205128205128,
+      "recall": 0.7692307692307693,
+      "roc_auc": 0.6978021978021979,
+      "cv_accuracy_train": 0.6198347107438017,
+      "model": "CalibratedClassifierCV",
+      "accuracy_95ci": [
+        0.467,
+        0.714
+      ]
+    },
+    "RCA": {
+      "threshold": 0.3,
+      "accuracy": 0.5081967213114754,
+      "f1": 0.53125,
+      "precision": 0.38636363636363635,
+      "recall": 0.85,
+      "roc_auc": 0.7121951219512195,
+      "cv_accuracy_train": 0.5537190082644629,
+      "model": "CalibratedClassifierCV",
+      "accuracy_95ci": [
+        0.383,
+        0.634
+      ]
+    }
+  }
+}

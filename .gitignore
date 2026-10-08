@@ -19,3 +19,8 @@ __pycache__/
 
 # Node.js dependencies
 node_modules/
+
+antigravity_specs/
+
+test_ml_model/
+

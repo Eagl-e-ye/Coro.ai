@@ -21,31 +21,45 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (accuracy_score, classification_report, f1_score,
                              precision_score, recall_score, roc_auc_score)
 from sklearn.model_selection import StratifiedKFold, cross_val_predict, train_test_split
 
-from data import TARGETS, load, make_pipeline, xy
+from data import TARGETS, load, make_pipeline, model_for, xy
 
 warnings.filterwarnings("ignore")
 SEED = 42
 OUT = Path(__file__).resolve().parent / "models"
 
-# Settled in tune.py by nested CV. Not re-derived here, and never from the test set.
-THRESHOLDS = {"Cath": 0.46, "LAD": 0.40, "LCX": 0.42, "RCA": 0.39}
+THRESH_FILE = Path(__file__).resolve().parent / "thresholds.json"
 
 
-def model_for(target: str):
-    """One model family for all four targets.
+def load_thresholds() -> dict:
+    """Read the thresholds tune.py produced — never hardcode them here.
 
-    compare.py showed every candidate within noise of every other, so claiming
-    a different winner per target would be fitting the noise. class_weight
-    matters more than the family: it reweights the loss for the 38%-positive
-    targets, which is most of what a tuned threshold would otherwise fix.
+    A threshold is tuned for one specific model in one specific environment.
+    Copying numbers between files by hand means the day you change the model,
+    or run on a machine with a different sklearn, the thresholds silently stop
+    matching and every prediction shifts. Nothing errors. You find out when the
+    demo behaves oddly.
     """
-    return RandomForestClassifier(n_estimators=500, class_weight="balanced",
-                                  random_state=SEED, n_jobs=-1)
+    if not THRESH_FILE.exists():
+        raise SystemExit(
+            f"{THRESH_FILE.name} not found.\n"
+            "Run `python tune.py` first — it chooses the decision thresholds "
+            "by nested CV and writes them here."
+        )
+    blob = json.loads(THRESH_FILE.read_text())
+
+    import sklearn
+    if blob.get("sklearn") != sklearn.__version__:
+        print(f"  ! thresholds.json was generated on sklearn "
+              f"{blob.get('sklearn')}, you are on {sklearn.__version__}.")
+        print("    Probability calibration differs between versions. "
+              "Re-run tune.py.\n")
+    return blob["thresholds"]
+
+
 
 
 def main():
@@ -56,6 +70,7 @@ def main():
 
     df = load()
     OUT.mkdir(exist_ok=True)
+    thresholds = load_thresholds()
 
     # One split, shared by all four targets, stratified on overall CAD so the
     # test set has a representative case mix.
@@ -73,7 +88,7 @@ def main():
     for target in TARGETS:
         X_tr, y_tr = xy(train_df, target)
         X_te, y_te = xy(test_df, target)
-        thr = THRESHOLDS[target]
+        thr = thresholds[target]
 
         pipe = make_pipeline(model_for(target), X_tr).fit(X_tr, y_tr)
 
