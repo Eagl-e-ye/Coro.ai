@@ -44,21 +44,29 @@ Node is only needed for the webpage; Python only for the models and the 3D build
 
 ## Running the webpage
 
-This is the main thing. Three commands.
-
-```powershell
-cd E:\multimodal_ai_hackathon\frontend
-npm install          # first time only, ~1 min
-npm run dev
-```
-
 Then open **http://localhost:5173** — or Ctrl-click the link the terminal prints.
 
-You should see a beating translucent heart with coloured coronary arteries, a
-patient dropdown, a risk gauge and a vessel list. Drag to rotate, scroll to zoom,
-click a vessel to inspect it.
+---
 
-`npm run dev` keeps running and hot-reloads on save. Stop it with **Ctrl+C**.
+## Running Backend + Frontend Together
+
+To run the complete data → prediction → 3D visualization pipeline:
+
+### 1. Start the FastAPI Backend (Terminal 1)
+```powershell
+cd E:\multimodal_ai_hackathon
+.\venv\Scripts\Activate.ps1
+uvicorn backend.main:app --reload --port 8000
+```
+Backend health check is available at: **http://localhost:8000/api/health**
+
+### 2. Start the React Frontend (Terminal 2)
+```powershell
+cd E:\multimodal_ai_hackathon\frontend
+npm run dev
+```
+Open **http://localhost:5173** in your browser. The Vite dev server proxies `/api/*` requests to the FastAPI backend on port 8000.
+
 
 ### Checking it will work before you start
 
