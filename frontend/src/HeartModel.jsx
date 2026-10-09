@@ -10,6 +10,7 @@ useGLTF.preload(MODEL_URL);
 // renders as inert tissue. Keep this list in sync with vessel_map.json.
 const VESSEL_NODES = ["LAD", "LCX", "RCA"];
 const NEUTRAL = "#c8c8cd";
+const EMPTY_VESSEL_COLOR = "#b98b84";
 
 // Everything the ML output does NOT drive. Veins get their own blue so nobody
 // mistakes the great cardiac vein for a diseased artery, and the muscle stays
@@ -34,7 +35,7 @@ function beatEnvelope(t) {
   return ventricular + atrial;
 }
 
-function Part({ geometry, color, opacity, isVessel, risk, name, onHover, onSelect, selected }) {
+function Part({ geometry, color, opacity, isVessel, risk, name, onHover, onSelect, selected, hasPrediction }) {
   const matRef = useRef();
   const target = useMemo(() => new THREE.Color(color), [color]);
   const [hovered, setHovered] = useState(false);
@@ -43,20 +44,18 @@ function Part({ geometry, color, opacity, isVessel, risk, name, onHover, onSelec
     const m = matRef.current;
     if (!m) return;
 
-    // Ease toward the predicted color instead of snapping. When a new
-    // prediction arrives the vessel visibly "warms up" into its risk color,
-    // which reads as a state change rather than a glitch.
+    // Ease toward the predicted color instead of snapping.
     m.color.lerp(target, 1 - Math.pow(0.001, delta));
 
-    // High-risk vessels glow in time with the beat. The eye catches a moving
-    // highlight far faster than it catches a static hue, so the dangerous
-    // vessel announces itself before the user reads a single number.
-    if (isVessel) {
+    // High-risk vessels glow in time with the beat only when a prediction exists
+    if (isVessel && hasPrediction) {
       const t = (state.clock.elapsedTime % 1.2) / 1.2;
       const pulse = beatEnvelope(t);
       const strength = risk === "High" ? 0.85 : risk === "Moderate" ? 0.35 : 0.0;
       m.emissive.copy(target);
       m.emissiveIntensity = strength * pulse + (hovered ? 0.4 : 0) + (selected ? 0.3 : 0);
+    } else {
+      m.emissiveIntensity = 0;
     }
   });
 
@@ -65,7 +64,7 @@ function Part({ geometry, color, opacity, isVessel, risk, name, onHover, onSelec
       geometry={geometry}
       onPointerOver={isVessel ? (e) => { e.stopPropagation(); setHovered(true); onHover?.(name); } : undefined}
       onPointerOut={isVessel ? () => { setHovered(false); onHover?.(null); } : undefined}
-      onClick={isVessel ? (e) => { e.stopPropagation(); onSelect?.(name); } : undefined}
+      onClick={isVessel ? (e) => { e.stopPropagation(); onSelect?.(name, e.nativeEvent.clientX, e.nativeEvent.clientY); } : undefined}
     >
       <meshStandardMaterial
         ref={matRef}
@@ -80,14 +79,16 @@ function Part({ geometry, color, opacity, isVessel, risk, name, onHover, onSelec
   );
 }
 
-export default function HeartModel({ prediction, bpm = 72, onHover, onSelect, selected }) {
+export default function HeartModel({ prediction, bpm = 72, onHover, onSelect, selected, onHeartHover }) {
   const group = useRef();
   const { nodes } = useGLTF(MODEL_URL);
 
-  // Beat the whole assembly as one body so the arteries stay welded to the
-  // muscle. Scaling parts independently is what makes anatomy "swim".
   useFrame((state) => {
     if (!group.current) return;
+    if (!prediction || !bpm) {
+      group.current.scale.set(1, 1, 1);
+      return;
+    }
     const period = 60 / bpm;
     const t = (state.clock.elapsedTime % period) / period;
     const s = 1 - 0.045 * beatEnvelope(t);
@@ -100,19 +101,33 @@ export default function HeartModel({ prediction, bpm = 72, onHover, onSelect, se
   );
 
   return (
+<<<<<<< Updated upstream
     <group ref={group} dispose={null}>
+=======
+    <group
+      ref={group}
+      position={[0.25, 0, 0]}
+      rotation={[-Math.PI / 2, Math.PI / 2, 0]}
+      dispose={null}
+      onPointerOver={(e) => { e.stopPropagation(); onHeartHover?.(true); }}
+      onPointerOut={() => onHeartHover?.(false)}
+    >
+>>>>>>> Stashed changes
       {parts.map(([name, node]) => {
         const isVessel = VESSEL_NODES.includes(name);
         const v = prediction?.vessels?.[name];
         const stat = STATIC_COLORS[name] ?? DEFAULT_STATIC;
+        const vesselColor = prediction ? (v?.color_hex ?? NEUTRAL) : EMPTY_VESSEL_COLOR;
+
         return (
           <Part
             key={name}
             name={name}
             geometry={node.geometry}
             isVessel={isVessel}
-            color={isVessel ? v?.color_hex ?? NEUTRAL : stat.color}
-            opacity={isVessel ? 1 : stat.opacity}
+            hasPrediction={Boolean(prediction)}
+            color={isVessel ? vesselColor : stat.color}
+            opacity={isVessel ? (prediction ? 1 : 0.7) : stat.opacity}
             risk={v?.risk_level}
             onHover={onHover}
             onSelect={onSelect}

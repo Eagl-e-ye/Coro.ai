@@ -69,9 +69,10 @@ def _featurize(raw: dict):
         c: (raw.get(c) if raw.get(c) not in (None, "") else DEFAULTS[c])
         for c in RAW_COLUMNS
     }
-    if raw.get("BMI") in (None, "") and raw.get("Weight") and raw.get("Length"):
-        h = float(raw["Length"]) / 100.0
-        row["BMI"] = float(raw["Weight"]) / (h * h) if h > 0 else DEFAULTS["BMI"]
+    w = float(row.get("Weight") or DEFAULTS["Weight"])
+    l = float(row.get("Length") or DEFAULTS["Length"])
+    h = l / 100.0
+    row["BMI"] = w / (h * h) if h > 0 else DEFAULTS["BMI"]
     row["Obesity"] = "Y" if float(row["BMI"]) >= 30 else "N"
 
     df = pd.DataFrame([row])

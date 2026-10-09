@@ -30,6 +30,9 @@ def do_predict(payload: dict[str, Any]):
     missing = [f for f in REQUIRED if payload.get(f) in (None, "")]
     if missing:
         raise HTTPException(422, f"missing required fields: {missing}")
+    sex = payload.get("Sex")
+    if sex not in {"Male", "Fmale"}:
+        raise HTTPException(422, f"Sex must be 'Male' or 'Fmale', got '{sex}'")
     return predict(payload)
 
 
