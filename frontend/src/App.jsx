@@ -5,6 +5,8 @@ import * as THREE from "three";
 import HeartModel from "./HeartModel";
 import ManualEntryModal from "./ManualEntryModal";
 import { getPatients, getPatient, postPredict } from "./api";
+import { adaptPrediction } from "./adaptPrediction";
+import { VESSEL_INFO, ALERT, tierOf } from "./vesselInfo";
 import "./App.css";
 
 const DEFAULT_REQUIRED = {
@@ -15,12 +17,6 @@ const DEFAULT_REQUIRED = {
   DM: 0,
 };
 
-<<<<<<< Updated upstream
-export default function App() {
-  const [patients, setPatients] = useState([]);
-  const [selectedPatientId, setSelectedPatientId] = useState("");
-  const [features, setFeatures] = useState(DEFAULT_REQUIRED);
-=======
 const WHAT_IF_SLIDERS = [
   { field: "LDL", label: "LDL cholesterol", unit: "mg/dL", min: 18, max: 232, defaultMedian: 100 },
   { field: "HDL", label: "HDL cholesterol", unit: "mg/dL", min: 16, max: 111, defaultMedian: 39 },
@@ -202,9 +198,9 @@ export default function App() {
   const [isModified, setIsModified] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
->>>>>>> Stashed changes
   const [prediction, setPrediction] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isStale, setIsStale] = useState(false);
   const [error, setError] = useState(null);
   const [hovered, setHovered] = useState(null);
   const [selected, setSelected] = useState(null);
@@ -212,59 +208,55 @@ export default function App() {
   const [bpm, setBpm] = useState(72);
   const [isHeartHovered, setIsHeartHovered] = useState(false);
 
-<<<<<<< Updated upstream
-  const seq = useRef(0);
-
-  // Load patients list on mount
-=======
   const controlsRef = useRef(null);
   const heartRef = useRef(null);   // ref on the .heart div for coord conversion
   const debounceTimer = useRef(null);
 
-  // Load patient list on mount (S.6: no patient selected on load)
->>>>>>> Stashed changes
+  // Load patient list on mount (select 5 random patients by default)
   useEffect(() => {
     getPatients()
       .then((res) => {
         if (res?.patients && res.patients.length > 0) {
-          setPatients(res.patients);
-<<<<<<< Updated upstream
-          // Pick first patient by default
-          loadPatientData(res.patients[0].id);
-=======
->>>>>>> Stashed changes
+          const shuffled = [...res.patients].sort(() => 0.5 - Math.random());
+          setPatients(shuffled.slice(0, 5));
         }
       })
-      .catch((err) => {
-        setError("Could not load patients list. Make sure backend is running.");
+      .catch(() => {
+        setError("Could not reach backend API. Make sure FastAPI is running on port 8000.");
       });
   }, []);
 
-  async function runPredict(featsToPredict) {
-    const mine = ++seq.current;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await postPredict(featsToPredict);
-      if (mine === seq.current) {
-        setPrediction(data);
-      }
-    } catch (e) {
-      if (mine === seq.current) {
-        setError(e.message || "Prediction failed");
+  // Esc key closes speech bubble
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") setSelected(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Debounced prediction runner
+  function triggerPrediction(featsToPredict) {
+    setIsStale(true);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+
+    debounceTimer.current = setTimeout(async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const rawRes = await postPredict(featsToPredict);
+        if (rawRes) {
+          const adapted = adaptPrediction(rawRes);
+          setPrediction(adapted);
+          setIsStale(false);
+        }
+      } catch (err) {
+        setError(err.message || "Prediction request failed");
         setPrediction(null);
-      }
-    } finally {
-      if (mine === seq.current) {
+      } finally {
         setLoading(false);
       }
-    }
+    }, 150);
   }
 
-<<<<<<< Updated upstream
-  async function loadPatientData(pid) {
-    setSelectedPatientId(pid);
-=======
   async function loadPatientRecord(val) {
     if (val === "") {
       setSelectedPatientId("");
@@ -285,24 +277,19 @@ export default function App() {
 
     setSelectedPatientId(val);
     setIsModified(false);
->>>>>>> Stashed changes
     setSelected(null);
     try {
       const p = await getPatient(val);
       if (p?.features) {
         setFeatures(p.features);
-<<<<<<< Updated upstream
-        runPredict(p.features);
-=======
         setBaselineFeatures(p.features);
         setActualLabels(p.actual || null);
         setProvenance(null);
         if (p.features.PR) setBpm(p.features.PR);
         triggerPrediction(p.features);
->>>>>>> Stashed changes
       }
-    } catch (e) {
-      setError(e.message || "Failed to load patient record");
+    } catch (err) {
+      setError(err.message || "Failed to load patient record");
     }
   }
 
@@ -310,9 +297,6 @@ export default function App() {
     if (!features || !baselineFeatures) return;
     const updated = { ...features, [field]: val };
     setFeatures(updated);
-<<<<<<< Updated upstream
-    runPredict(updated);
-=======
     if (field === "PR") setBpm(val);
 
     const modified = WHAT_IF_SLIDERS.some((s) => {
@@ -378,14 +362,11 @@ export default function App() {
     }
 
     requestAnimationFrame(animate);
->>>>>>> Stashed changes
   }
 
   const active = selected ?? hovered;
   const activeVessel = active ? prediction?.vessels?.[active] : null;
 
-<<<<<<< Updated upstream
-=======
   const drivers = activeVessel?.top_shap_features ?? [];
   const maxImpact = Math.max(0.0001, ...drivers.map((f) => Math.abs(parseFloat(f.impact)) || 0));
 
@@ -399,43 +380,23 @@ export default function App() {
     (actualCath === "Normal" && predStatus?.includes("Low"))
   );
 
->>>>>>> Stashed changes
   return (
-    <div className="app">
-      <aside className="panel">
-        <header>
-          <h1>Coronary Risk Viewer</h1>
-          <p className="sub">FastAPI Backend · 3D Heart Visualizer</p>
-        </header>
+    <div className="page">
+      <header className="topbar">
+        <div className="brand-mark" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 12h5l2.5-6 4 12 2.5-6H22" />
+          </svg>
+        </div>
+        <div>
+          <h1>Coro.ai</h1>
+          <p className="sub">Cardiovascular Risk Visualizer</p>
+        </div>
+      </header>
 
-        {error && <div className="error-banner">{error}</div>}
+      {error && <div className="error-banner">{error}</div>}
 
-<<<<<<< Updated upstream
-        <label className="field">
-          <span>Select Patient Dataset Record</span>
-          <select
-            value={selectedPatientId}
-            onChange={(e) => loadPatientData(e.target.value)}
-          >
-            {patients.map((p) => (
-              <option key={p.id} value={p.id}>
-                Patient #{p.id} ({p.age}y, {p.sex})
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {/* Input Form for required/key features */}
-        <div className="form-grid">
-          <div className="form-label full-width">Required Patient Inputs</div>
-
-          <label className="field">
-            <span>Age</span>
-            <input
-              type="number"
-              value={features.Age ?? 58}
-              onChange={(e) => handleFeatureChange("Age", parseInt(e.target.value) || 0)}
-=======
       <ManualEntryModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -578,39 +539,16 @@ export default function App() {
               minPolarAngle={Math.PI / 2 - 0.5}
               autoRotate={!selected}
               autoRotateSpeed={0.5}
->>>>>>> Stashed changes
             />
-          </label>
+          </Canvas>
 
-          <label className="field">
-            <span>Sex</span>
-            <select
-              value={features.Sex ?? "Male"}
-              onChange={(e) => handleFeatureChange("Sex", e.target.value)}
-            >
-              <option value="Male">Male</option>
-              <option value="Fmale">Female</option>
-            </select>
-          </label>
+          {loading && <div className="loading">Running model</div>}
 
-          <div className="full-width checkbox-field">
-            <input
-              type="checkbox"
-              id="tcp"
-              checked={Boolean(features["Typical Chest Pain"])}
-              onChange={(e) => handleFeatureChange("Typical Chest Pain", e.target.checked ? 1 : 0)}
-            />
-            <label htmlFor="tcp">Typical Chest Pain</label>
+          <div className="hud" aria-label={`Heart rate ${bpm} beats per minute`}>
+            <span className="beat" style={{ animationDuration: `${60 / bpm}s` }} />
+            <span><b>{bpm}</b> bpm</span>
           </div>
 
-<<<<<<< Updated upstream
-          <div className="checkbox-field">
-            <input
-              type="checkbox"
-              id="htn"
-              checked={Boolean(features.HTN)}
-              onChange={(e) => handleFeatureChange("HTN", e.target.checked ? 1 : 0)}
-=======
           {selected && (
             <ComicBubble
               key={selected}
@@ -618,141 +556,102 @@ export default function App() {
               vessel={prediction?.vessels?.[selected]}
               onClose={() => setSelected(null)}
               anchor={clickPos}
->>>>>>> Stashed changes
             />
-            <label htmlFor="htn">HTN</label>
-          </div>
+          )}
 
-<<<<<<< Updated upstream
-          <div className="checkbox-field">
-            <input
-              type="checkbox"
-              id="dm"
-              checked={Boolean(features.DM)}
-              onChange={(e) => handleFeatureChange("DM", e.target.checked ? 1 : 0)}
-            />
-            <label htmlFor="dm">DM</label>
-=======
           <div className="hint">
             {selected
               ? `${selected} selected. Click it again to close`
               : "Hover over the heart to zoom/rotate, click an artery to inspect details"}
->>>>>>> Stashed changes
           </div>
         </div>
+      </section>
 
-        <label className="field">
-          <span>Heart rate · {bpm} bpm</span>
-          <input
-            type="range"
-            min="45"
-            max="140"
-            value={bpm}
-            onChange={(e) => setBpm(+e.target.value)}
-          />
-        </label>
+      {/* OUTPUT below */}
+      <section className={`results ${isStale || loading ? "is-stale" : ""}`}>
+        <div>
+          <RiskGauge overall={prediction?.overall_cad} />
 
-        {/* Results Container with Dimming */}
-        <div className={`results-section ${loading ? "dimmed" : ""}`}>
-          {prediction?.meta?.assumed_important && prediction.meta.assumed_important.length > 0 && (
-            <div className="meta-warning">
-              ⚡ Assumed defaults with high weight: {prediction.meta.assumed_important.join(", ")}
+          {showActualReveal && (
+            <div className={`actual-reveal ${isMatch ? "match" : "diff"}`}>
+              Actual Catheterisation: {actualCath} {isMatch ? "✓ (Agreed with Model)" : "⚠️ (Model Disagreed)"}
             </div>
           )}
 
-          {prediction && (
-            <>
-              <div className="gauge">
-                <div className="gauge-label">Overall CAD probability</div>
-                <div className="gauge-value">
-                  {(prediction.overall_cad.probability * 100).toFixed(0)}
-                  <span>%</span>
-                </div>
-                <div className="gauge-bar">
-                  <div
-                    className="gauge-fill"
-                    style={{ width: `${prediction.overall_cad.probability * 100}%` }}
-                  />
-                  <div
-                    className="gauge-tick"
-                    style={{ left: `${prediction.overall_cad.threshold_used * 100}%` }}
-                  />
-                </div>
-                <div className="gauge-status">{prediction.overall_cad.status}</div>
-              </div>
-
-              <div className="vessels">
-                {Object.entries(prediction.vessels).map(([name, v]) => (
-                  <button
-                    key={name}
-                    className={`vessel ${selected === name ? "is-selected" : ""}`}
-                    onMouseEnter={() => setHovered(name)}
-                    onMouseLeave={() => setHovered(null)}
-                    onClick={() => setSelected(selected === name ? null : name)}
-                  >
-                    <span className="dot" style={{ background: v.color_hex }} />
-                    <span className="vname">{name}</span>
-                    <span className="vprob">{(v.probability * 100).toFixed(0)}%</span>
-                    <span className="vstatus">{v.status}</span>
-                  </button>
-                ))}
-              </div>
-            </>
+          {prediction?.meta && (
+            <div className="provenance-bar">
+              <span>{prediction.meta.entered_count} entered · {prediction.meta.assumed_count} assumed</span>
+              <span>Model v{prediction.meta.model_version}</span>
+            </div>
           )}
 
-          {activeVessel && (
-            <div className="shap">
-              <div className="shap-head">{active} · top drivers</div>
-              {activeVessel.top_shap_features && activeVessel.top_shap_features.length > 0 ? (
-                activeVessel.top_shap_features.map((f, i) => (
+          {prediction?.meta?.assumed_important && prediction.meta.assumed_important.length > 0 && (
+            <div className="assumed-warning">
+              ⚡ Assumed defaults with high model weight: {prediction.meta.assumed_important.join(", ")}
+            </div>
+          )}
+        </div>
+
+        <div className="vessels">
+          {prediction ? (
+            Object.entries(prediction.vessels).map(([name, v]) => (
+              <button key={name}
+                      className={`vessel ${selected === name ? "is-selected" : ""}`}
+                      style={{ "--c": v.color_hex, "--p": `${v.probability * 100}%` }}
+                      aria-pressed={selected === name}
+                      onMouseEnter={() => setHovered(name)}
+                      onMouseLeave={() => setHovered(null)}
+                      onFocus={() => setHovered(name)}
+                      onBlur={() => setHovered(null)}
+                      onClick={() => setSelected(selected === name ? null : name)}>
+                <span className="vessel-head">
+                  <span className="dot" />
+                  <span className="vname">{name}</span>
+                  <span className="vstatus">{v.status}</span>
+                  <span className="vprob">{(v.probability * 100).toFixed(0)}<small>%</small></span>
+                </span>
+                <span className="vbar"><i /></span>
+              </button>
+            ))
+          ) : (
+            <div className="shap shap-empty">
+              Results for LAD, LCX and RCA appear here once you select a patient.
+            </div>
+          )}
+        </div>
+
+        {activeVessel ? (
+          <div className="shap">
+            <div className="shap-head">{active} <span>top drivers</span></div>
+            {drivers.length > 0 ? (
+              drivers.map((f, i) => {
+                const neg = String(f.impact).startsWith("-");
+                const w = ((Math.abs(parseFloat(f.impact)) || 0) / maxImpact) * 100;
+                return (
                   <div className="shap-row" key={i}>
                     <span className="f">{f.feature}</span>
                     <span className="v">{String(f.value)}</span>
-                    <span
-                      className={`i ${String(f.impact).startsWith("-") ? "neg" : "pos"}`}
-                    >
-                      {f.impact}
-                    </span>
+                    <span className={`i ${neg ? "neg" : "pos"}`}>{f.impact}</span>
+                    <span className="bar"><i style={{ width: `${w}%` }} /></span>
                   </div>
-                ))
-              ) : (
-                <div className="shap-empty">Explanations (SHAP) loading / unavailable</div>
-              )}
-            </div>
-          )}
-        </div>
+                );
+              })
+            ) : (
+              <div className="shap-empty">Explanations (SHAP) loading / unavailable</div>
+            )}
+          </div>
+        ) : (
+          <div className="shap shap-empty">
+            {prediction
+              ? "Select a vessel to see which factors push its risk up or down."
+              : "The factors behind each vessel's risk will show here."}
+          </div>
+        )}
+      </section>
 
-        <p className="disclaimer">
-          Decision support and education only. Not a diagnosis and not a substitute for formal diagnostic imaging.
-        </p>
-      </aside>
-
-      <main className="stage">
-        {loading && <div className="loading">running model…</div>}
-        <Canvas camera={{ position: [0, 0.6, 3.4], fov: 42 }}>
-          <hemisphereLight args={["#cfe3ff", "#2a1f1f", 0.65]} />
-          <directionalLight position={[3, 5, 2]} intensity={2.2} />
-          <directionalLight position={[-4, 1, -3]} intensity={0.7} color="#8fb5ff" />
-          <directionalLight position={[0, -3, 1]} intensity={0.35} color="#ffb3a7" />
-          <Suspense fallback={null}>
-            <HeartModel
-              prediction={prediction}
-              bpm={bpm}
-              onHover={setHovered}
-              onSelect={(n) => setSelected((s) => (s === n ? null : n))}
-              selected={selected}
-            />
-          </Suspense>
-          <OrbitControls
-            enablePan={false}
-            minDistance={1.6}
-            maxDistance={7}
-            autoRotate={!selected}
-            autoRotateSpeed={0.5}
-          />
-        </Canvas>
-        <div className="hint">drag to rotate · scroll to zoom · click a vessel</div>
-      </main>
+      <p className="disclaimer">
+        Research prototype. Decision support and education only. Not a medical device or diagnosis.
+      </p>
     </div>
   );
 }

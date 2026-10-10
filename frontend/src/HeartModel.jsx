@@ -101,9 +101,6 @@ export default function HeartModel({ prediction, bpm = 72, onHover, onSelect, se
   );
 
   return (
-<<<<<<< Updated upstream
-    <group ref={group} dispose={null}>
-=======
     <group
       ref={group}
       position={[0.25, 0, 0]}
@@ -112,7 +109,6 @@ export default function HeartModel({ prediction, bpm = 72, onHover, onSelect, se
       onPointerOver={(e) => { e.stopPropagation(); onHeartHover?.(true); }}
       onPointerOut={() => onHeartHover?.(false)}
     >
->>>>>>> Stashed changes
       {parts.map(([name, node]) => {
         const isVessel = VESSEL_NODES.includes(name);
         const v = prediction?.vessels?.[name];
