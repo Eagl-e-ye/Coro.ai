@@ -4,6 +4,7 @@ import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import HeartModel from "./HeartModel";
 import ManualEntryModal from "./ManualEntryModal";
+import NumberSliderField from "./NumberSliderField";
 import { getPatients, getPatient, postPredict } from "./api";
 import { adaptPrediction } from "./adaptPrediction";
 import { VESSEL_INFO, ALERT, tierOf } from "./vesselInfo";
@@ -18,13 +19,13 @@ const DEFAULT_REQUIRED = {
 };
 
 const WHAT_IF_SLIDERS = [
-  { field: "LDL", label: "LDL cholesterol", unit: "mg/dL", min: 18, max: 232, defaultMedian: 100 },
-  { field: "HDL", label: "HDL cholesterol", unit: "mg/dL", min: 16, max: 111, defaultMedian: 39 },
-  { field: "TG", label: "Triglycerides", unit: "mg/dL", min: 37, max: 400, defaultMedian: 122 },
-  { field: "FBS", label: "Fasting blood sugar", unit: "mg/dL", min: 62, max: 400, defaultMedian: 98 },
-  { field: "BP", label: "Systolic BP", unit: "mmHg", min: 90, max: 190, defaultMedian: 130 },
-  { field: "PR", label: "Pulse rate", unit: "bpm", min: 50, max: 110, defaultMedian: 70 },
-  { field: "Weight", label: "Weight", unit: "kg", min: 48, max: 120, defaultMedian: 74, singleCol: true },
+  { field: "LDL", label: "LDL cholesterol", unit: "mg/dL", min: 18, max: 232, step: 1, defaultMedian: 100 },
+  { field: "HDL", label: "HDL cholesterol", unit: "mg/dL", min: 16, max: 111, step: 0.1, defaultMedian: 39 },
+  { field: "TG", label: "Triglycerides", unit: "mg/dL", min: 37, max: 400, step: 1, defaultMedian: 122 },
+  { field: "FBS", label: "Fasting blood sugar", unit: "mg/dL", min: 62, max: 400, step: 1, defaultMedian: 98 },
+  { field: "BP", label: "Systolic BP", unit: "mmHg", min: 90, max: 190, step: 1, defaultMedian: 130 },
+  { field: "PR", label: "Pulse rate", unit: "bpm", min: 50, max: 110, step: 1, defaultMedian: 70 },
+  { field: "Weight", label: "Weight", unit: "kg", min: 48, max: 120, step: 0.5, defaultMedian: 74, singleCol: true },
 ];
 
 /* ---------- count up animation helper ---------- */
@@ -460,37 +461,20 @@ export default function App() {
                   {WHAT_IF_SLIDERS.map((s) => {
                     const currentVal = features[s.field] ?? s.defaultMedian;
                     const baselineVal = baselineFeatures[s.field] ?? s.defaultMedian;
-                    const pct = Math.max(0, Math.min(100, ((currentVal - s.min) / (s.max - s.min)) * 100));
-                    const ghostPct = Math.max(0, Math.min(100, ((baselineVal - s.min) / (s.max - s.min)) * 100));
 
                     return (
-                      <label key={s.field} className={`slider-field ${s.singleCol ? "single-col" : ""}`}>
-                        <div className="slider-row">
-                          <span className="slider-label">{s.label}</span>
-                          <span className="slider-val">
-                            <b>{currentVal}</b> {s.unit}
-                            {currentVal !== baselineVal && (
-                              <span className="baseline-diff"> (was {baselineVal})</span>
-                            )}
-                          </span>
-                        </div>
-                        <div className="slider-track-wrap">
-                          <input
-                            type="range"
-                            className="range"
-                            min={s.min}
-                            max={s.max}
-                            value={currentVal}
-                            style={{ "--fill": `${pct}%` }}
-                            onChange={(e) => handleSliderChange(s.field, Number(e.target.value))}
-                          />
-                          <div
-                            className="ghost-tick"
-                            style={{ left: `${ghostPct}%` }}
-                            title={`Baseline: ${baselineVal} ${s.unit}`}
-                          />
-                        </div>
-                      </label>
+                      <NumberSliderField
+                        key={s.field}
+                        label={s.label}
+                        unit={s.unit}
+                        value={currentVal}
+                        min={s.min}
+                        max={s.max}
+                        step={s.step}
+                        baselineVal={baselineVal}
+                        singleCol={s.singleCol}
+                        onCommit={(val) => handleSliderChange(s.field, val)}
+                      />
                     );
                   })}
                 </div>
