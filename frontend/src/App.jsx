@@ -118,10 +118,10 @@ function RiskGauge({ overall }) {
       <div className="gauge-label">Overall CAD probability</div>
       <div className="dial-wrap">
         <svg className="dial" viewBox="0 0 200 106" role="img"
-             aria-label={ready ? `Overall CAD probability ${(p * 100).toFixed(0)} percent` : "No result yet"}>
+          aria-label={ready ? `Overall CAD probability ${(p * 100).toFixed(0)} percent` : "No result yet"}>
           <path className="dial-track" d={ARC} pathLength="100" />
           <path className="dial-fill" d={ARC} pathLength="100"
-                style={{ strokeDasharray: 100, strokeDashoffset: 100 - p * 100 }} />
+            style={{ strokeDasharray: 100, strokeDashoffset: 100 - p * 100 }} />
           {ready && <line className="dial-tick" x1={x1} y1={y1} x2={x2} y2={y2} />}
         </svg>
         <div className="dial-readout">
@@ -154,10 +154,10 @@ function ComicBubble({ name, vessel, onClose, anchor }) {
     const { x, y, w, h } = anchor;
     const NUDGE = 4; // small gap between click point and bubble edge
     const goRight = x <= w * 0.55;
-    const goDown  = y <= h * 0.5;
+    const goDown = y <= h * 0.5;
     posStyle = {
       ...(goRight ? { left: x + NUDGE } : { right: (w - x) + NUDGE }),
-      ...(goDown  ? { top:  y + NUDGE } : { bottom: (h - y) + NUDGE }),
+      ...(goDown ? { top: y + NUDGE } : { bottom: (h - y) + NUDGE }),
     };
     corner = `${goDown ? "t" : "b"}${goRight ? "l" : "r"}`;
   }
@@ -385,7 +385,7 @@ export default function App() {
       <header className="topbar">
         <div className="brand-mark" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M2 12h5l2.5-6 4 12 2.5-6H22" />
           </svg>
         </div>
@@ -596,14 +596,14 @@ export default function App() {
           {prediction ? (
             Object.entries(prediction.vessels).map(([name, v]) => (
               <button key={name}
-                      className={`vessel ${selected === name ? "is-selected" : ""}`}
-                      style={{ "--c": v.color_hex, "--p": `${v.probability * 100}%` }}
-                      aria-pressed={selected === name}
-                      onMouseEnter={() => setHovered(name)}
-                      onMouseLeave={() => setHovered(null)}
-                      onFocus={() => setHovered(name)}
-                      onBlur={() => setHovered(null)}
-                      onClick={() => setSelected(selected === name ? null : name)}>
+                className={`vessel ${selected === name ? "is-selected" : ""}`}
+                style={{ "--c": v.color_hex, "--p": `${v.probability * 100}%` }}
+                aria-pressed={selected === name}
+                onMouseEnter={() => setHovered(name)}
+                onMouseLeave={() => setHovered(null)}
+                onFocus={() => setHovered(name)}
+                onBlur={() => setHovered(null)}
+                onClick={() => setSelected(selected === name ? null : name)}>
                 <span className="vessel-head">
                   <span className="dot" />
                   <span className="vname">{name}</span>
