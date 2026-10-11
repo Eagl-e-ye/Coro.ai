@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export default function NumberSliderField({
   label,
@@ -26,7 +26,16 @@ export default function NumberSliderField({
       ? Math.max(0, Math.min(100, ((baselineVal - trackMin) / (trackMax - trackMin || 1)) * 100))
       : pct;
 
+  const typingTimer = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimer.current) clearTimeout(typingTimer.current);
+    };
+  }, []);
+
   function commit(raw) {
+    if (typingTimer.current) clearTimeout(typingTimer.current);
     const n = parseFloat(raw);
     if (Number.isNaN(n)) {
       setDraft(null);
@@ -35,6 +44,20 @@ export default function NumberSliderField({
     const clamped = Math.min(trackMax, Math.max(trackMin, n));
     onCommit(clamped);
     setDraft(null);
+  }
+
+  function handleInputChange(e) {
+    const val = e.target.value;
+    setDraft(val);
+    if (typingTimer.current) clearTimeout(typingTimer.current);
+
+    const n = parseFloat(val);
+    // After ~700ms only if the parsed value is already in range
+    if (!Number.isNaN(n) && n >= trackMin && n <= trackMax) {
+      typingTimer.current = setTimeout(() => {
+        onCommit(n);
+      }, 700);
+    }
   }
 
   return (
@@ -49,7 +72,7 @@ export default function NumberSliderField({
             min={trackMin}
             max={trackMax}
             step={step}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={handleInputChange}
             onBlur={(e) => commit(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -57,6 +80,7 @@ export default function NumberSliderField({
                 e.currentTarget.blur();
               }
               if (e.key === "Escape") {
+                if (typingTimer.current) clearTimeout(typingTimer.current);
                 setDraft(null);
                 e.currentTarget.blur();
               }
