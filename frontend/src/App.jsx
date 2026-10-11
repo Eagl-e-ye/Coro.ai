@@ -7,7 +7,7 @@ import ManualEntryModal from "./ManualEntryModal";
 import NumberSliderField from "./NumberSliderField";
 import { getPatients, getPatient, postPredict } from "./api";
 import { adaptPrediction } from "./adaptPrediction";
-import { VESSEL_INFO, ALERT, tierOf } from "./vesselInfo";
+import { VESSEL_INFO, SYMPTOM_HEADING, ALERT, tierOf } from "./vesselInfo";
 import "./App.css";
 
 const DEFAULT_REQUIRED = {
@@ -179,7 +179,7 @@ function ComicBubble({ name, vessel, onClose, anchor }) {
 
         <p className="comic-says">{info.says[tier]}</p>
 
-        <p className="comic-label">Watch for:</p>
+        <p className="comic-label">{SYMPTOM_HEADING}</p>
         <ul>{info.symptoms.map((s) => <li key={s}>{s}</li>)}</ul>
 
         {(tier === "high" || tier === "mod") && <p className="comic-alert">{ALERT}</p>}
@@ -607,16 +607,32 @@ export default function App() {
         {activeVessel ? (
           <div className="shap">
             <div className="shap-head">{active} <span>top drivers</span></div>
+            <div className="shap-legend">
+              Red pushes risk up · green pushes risk down · bar length shows how much
+            </div>
             {drivers.length > 0 ? (
               drivers.map((f, i) => {
-                const neg = String(f.impact).startsWith("-");
-                const w = ((Math.abs(parseFloat(f.impact)) || 0) / maxImpact) * 100;
+                const impactVal = parseFloat(f.impact) || 0;
+                const neg = impactVal < 0 || String(f.impact).startsWith("-");
+                const w = Math.min(100, ((Math.abs(impactVal)) / maxImpact) * 100);
+                const displayVal =
+                  f.value === 1 && ["Typical Chest Pain", "HTN", "DM", "Current Smoker", "FH", "Atypical"].includes(f.feature)
+                    ? "Present"
+                    : f.value === 0 && ["Typical Chest Pain", "HTN", "DM", "Current Smoker", "FH", "Atypical"].includes(f.feature)
+                    ? "Absent"
+                    : String(f.value);
                 return (
                   <div className="shap-row" key={i}>
                     <span className="f">{f.feature}</span>
-                    <span className="v">{String(f.value)}</span>
+                    <span className="v">{displayVal}</span>
                     <span className={`i ${neg ? "neg" : "pos"}`}>{f.impact}</span>
-                    <span className="bar"><i style={{ width: `${w}%` }} /></span>
+                    <div className="shap-bar-track">
+                      <div className="shap-bar-zero" />
+                      <div
+                        className={`shap-bar-fill ${neg ? "neg" : "pos"}`}
+                        style={neg ? { right: "50%", width: `${w / 2}%` } : { left: "50%", width: `${w / 2}%` }}
+                      />
+                    </div>
                   </div>
                 );
               })

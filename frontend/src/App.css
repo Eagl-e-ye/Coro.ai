@@ -342,8 +342,48 @@ body {
 .shap-row .i { font-weight: 700; font-variant-numeric: tabular-nums; }
 .shap-row .i.pos { color: var(--high); }
 .shap-row .i.neg { color: var(--low); }
-.shap-row .bar { grid-column: span 3; height: 4px; background: var(--line); border-radius: 99px; overflow: hidden; }
-.shap-row .bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.shap-legend {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+  margin-top: -4px;
+  margin-bottom: 2px;
+  line-height: 1.35;
+}
+.shap-bar-track {
+  grid-column: span 3;
+  position: relative;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.shap-bar-zero {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--muted);
+  transform: translateX(-50%);
+  z-index: 2;
+  opacity: 0.7;
+}
+.shap-bar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  transition: width 0.3s ease;
+}
+.shap-bar-fill.pos {
+  background: var(--high);
+  border-radius: 0 99px 99px 0;
+}
+.shap-bar-fill.neg {
+  background: var(--low);
+  border-radius: 99px 0 0 99px;
+}
 
 .error-banner {
   background: rgba(224, 54, 54, 0.12);
