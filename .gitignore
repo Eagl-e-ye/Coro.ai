@@ -1,0 +1,26 @@
+# Virtual environment
+venv/
+.venv/
+
+# ZIP / compressed project files
+3d_files.zip
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment / secrets
+.env
+.env.*
+
+# VS Code
+.vscode/
+
+# Node.js dependencies
+node_modules/
+
+antigravity_specs/
+
+test_ml_model/
+

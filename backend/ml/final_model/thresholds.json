@@ -1,0 +1,13 @@
+{
+  "thresholds": {
+    "Cath": 0.48,
+    "LAD": 0.4,
+    "LCX": 0.32,
+    "RCA": 0.3
+  },
+  "model": "CalibratedClassifierCV(RandomForest 500, sigmoid, cv=3)",
+  "method": "nested CV 5x5; F1-optimal for Cath/LAD, recall-floor 0.85 for LCX/RCA",
+  "sklearn": "1.9.1",
+  "python": "3.13.16",
+  "generated": "2026-10-08T15:13:02+00:00"
+}
