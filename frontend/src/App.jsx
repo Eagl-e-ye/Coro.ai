@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, Suspense } from "react";
-import { Canvas } from "@react-three/fiber";
+import React, { useState, useEffect, useRef, useMemo, Suspense } from "react";
+import { createPortal } from "react-dom";
+import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import HeartModel from "./HeartModel";
@@ -8,6 +9,11 @@ import NumberSliderField from "./NumberSliderField";
 import { getPatients, getPatient, postPredict } from "./api";
 import { adaptPrediction } from "./adaptPrediction";
 import { VESSEL_INFO, SYMPTOM_HEADING, ALERT, tierOf } from "./vesselInfo";
+import HistoryDrawer from "./history/HistoryDrawer";
+import { useHistory } from "./history/historyStore";
+import ReportView from "./report/ReportView";
+import { buildReport } from "./report/buildReport";
+import { stamp } from "./report/utils";
 import "./App.css";
 
 const DEFAULT_REQUIRED = {
@@ -188,6 +194,32 @@ function ComicBubble({ name, vessel, onClose, anchor }) {
   );
 }
 
+/* ---------- 3D heart snapshot bridge (07_PATIENT_REPORT.md U.4) ---------- */
+function SnapshotBridge({ apiRef, backdrop = "#1d1440" }) {
+  const { gl, scene, camera } = useThree();
+  useEffect(() => {
+    apiRef.current = {
+      capture: () => {
+        const src = gl.domElement;
+        if (!src.width || !src.height) return null;
+        gl.render(scene, camera);
+        const out = document.createElement("canvas");
+        out.width = src.width;
+        out.height = src.height;
+        const ctx = out.getContext("2d");
+        ctx.fillStyle = backdrop;
+        ctx.fillRect(0, 0, out.width, out.height);
+        ctx.drawImage(src, 0, 0);
+        return out.toDataURL("image/jpeg", 0.9);
+      },
+    };
+    return () => {
+      apiRef.current = null;
+    };
+  }, [gl, scene, camera, apiRef, backdrop]);
+  return null;
+}
+
 /* ---------- main application ---------- */
 export default function App() {
   const [patients, setPatients] = useState([]);
@@ -208,6 +240,11 @@ export default function App() {
   const [clickPos, setClickPos] = useState(null); // anchor for label bubble
   const [bpm, setBpm] = useState(72);
   const [isHeartHovered, setIsHeartHovered] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [saveFeedback, setSaveFeedback] = useState(false);
+  const [reportData, setReportData] = useState(null);
+  const { snapshots, addSnapshot } = useHistory();
+  const snapshotRef = useRef(null);
 
   const controlsRef = useRef(null);
   const heartRef = useRef(null);   // ref on the .heart div for coord conversion
@@ -365,6 +402,85 @@ export default function App() {
     requestAnimationFrame(animate);
   }
 
+  function handleSaveSnapshot() {
+    if (!prediction || loading || isStale) return;
+
+    const enteredInputs = {};
+    if (features) {
+      Object.entries(features).forEach(([k, val]) => {
+        if (val !== null && val !== undefined) {
+          enteredInputs[k] = val;
+        }
+      });
+    }
+
+    const patientRef = selectedPatientId === "manual"
+      ? "Manual entry"
+      : selectedPatientId ? `Patient #${selectedPatientId}` : "Patient";
+
+    addSnapshot({
+      patientRef,
+      mode: selectedPatientId === "manual" ? "manual" : "recorded",
+      whatIf: Boolean(isModified),
+      inputs: enteredInputs,
+      result: {
+        overall: {
+          p: prediction.overall_cad?.probability ?? 0,
+          threshold: prediction.overall_cad?.threshold_used ?? 0.48,
+        },
+        LAD: {
+          p: prediction.vessels?.LAD?.probability ?? 0,
+          threshold: prediction.vessels?.LAD?.threshold_used ?? 0.40,
+        },
+        LCX: {
+          p: prediction.vessels?.LCX?.probability ?? 0,
+          threshold: prediction.vessels?.LCX?.threshold_used ?? 0.32,
+        },
+        RCA: {
+          p: prediction.vessels?.RCA?.probability ?? 0,
+          threshold: prediction.vessels?.RCA?.threshold_used ?? 0.30,
+        },
+      },
+    });
+
+    setSaveFeedback(true);
+    setTimeout(() => setSaveFeedback(false), 2000);
+  }
+
+  function handleGenerateReport() {
+    if (!prediction || loading || isStale) return;
+    let heartImg = null;
+    try {
+      heartImg = snapshotRef.current?.capture?.() ?? null;
+    } catch {
+      // report prints cleanly without picture
+    }
+    const reportObj = buildReport({
+      selectedPatientId,
+      features,
+      baselineFeatures,
+      actualLabels,
+      prediction,
+      isModified,
+    });
+    setReportData({ ...reportObj, heartImg });
+  }
+
+  // Print-to-PDF trigger (U.2)
+  useEffect(() => {
+    if (!reportData) return;
+    const prevTitle = document.title;
+    document.title = `coro-report-${reportData.patientRef.replace(/\s+/g, "-")}-${stamp(reportData.generatedAt)}`;
+    const done = () => setReportData(null);
+    window.addEventListener("afterprint", done, { once: true });
+    const id = requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener("afterprint", done);
+      document.title = prevTitle;
+    };
+  }, [reportData]);
+
   const active = selected ?? hovered;
   const activeVessel = active ? prediction?.vessels?.[active] : null;
 
@@ -381,6 +497,14 @@ export default function App() {
     (actualCath === "Normal" && predStatus?.includes("Low"))
   );
 
+  const reportHelperText = !prediction
+    ? "Nothing selected yet"
+    : isStale || loading
+    ? "Updating…"
+    : error
+    ? "Result unavailable"
+    : "Opens your print dialog — choose Save as PDF";
+
   return (
     <div className="page">
       <header className="topbar">
@@ -393,6 +517,37 @@ export default function App() {
         <div>
           <h1>Coro.ai</h1>
           <p className="sub">Cardiovascular Risk Visualizer</p>
+        </div>
+        <div className="topbar-actions">
+          <button
+            className="btn-snapshot-topbar"
+            disabled={!prediction || loading || isStale}
+            onClick={handleSaveSnapshot}
+            title={!prediction ? "Select a patient to save snapshot" : "Save current model outputs as a snapshot"}
+          >
+            {saveFeedback ? "✓ Saved" : "Save Snapshot"}
+          </button>
+          <button
+            className="btn-report-topbar"
+            disabled={!prediction || loading || isStale}
+            onClick={handleGenerateReport}
+            title={reportHelperText}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            Export PDF Report
+          </button>
+          <button
+            className="btn-history-topbar"
+            onClick={() => setIsHistoryOpen(true)}
+            title="View saved snapshots"
+          >
+            Saved Snapshots ({snapshots.length})
+          </button>
         </div>
       </header>
 
@@ -513,6 +668,7 @@ export default function App() {
                 onHeartHover={setIsHeartHovered}
               />
             </Suspense>
+            <SnapshotBridge apiRef={snapshotRef} />
             <OrbitControls
               ref={controlsRef}
               enablePan={false}
@@ -652,6 +808,19 @@ export default function App() {
       <p className="disclaimer">
         Research prototype. Decision support and education only. Not a medical device or diagnosis.
       </p>
+
+      <HistoryDrawer
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+      />
+
+      {reportData &&
+        typeof document !== "undefined" &&
+        document.getElementById("report-root") &&
+        createPortal(
+          <ReportView report={reportData} />,
+          document.getElementById("report-root")
+        )}
     </div>
   );
 }
