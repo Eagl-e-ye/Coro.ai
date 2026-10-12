@@ -72,7 +72,7 @@ def _featurize(raw: dict):
     w = float(row.get("Weight") or DEFAULTS["Weight"])
     l = float(row.get("Length") or DEFAULTS["Length"])
     h = l / 100.0
-    row["BMI"] = w / (h * h) if h > 0 else DEFAULTS["BMI"]
+    row["BMI"] = round(w / (h * h), 1) if h > 0 else round(float(DEFAULTS["BMI"]), 1)
     row["Obesity"] = "Y" if float(row["BMI"]) >= 30 else "N"
 
     df = pd.DataFrame([row])
@@ -129,7 +129,31 @@ def _get_top_shap(target: str, X: pd.DataFrame, raw: dict):
 
         out = []
         for feat, imp in sorted_feats[:3]:
-            raw_val = raw.get(feat, DEFAULTS.get(feat, "N/A"))
+            # Look up feature value: check featurized X first (engineered features), then raw input, then DEFAULTS
+            if feat in X.columns:
+                val = X[feat].iloc[0]
+                if isinstance(val, (float, np.floating)):
+                    if feat == "BMI":
+                        raw_val = round(float(val), 1)
+                    elif float(val).is_integer():
+                        raw_val = int(val)
+                    else:
+                        raw_val = round(float(val), 2)
+                elif isinstance(val, (int, np.integer)):
+                    raw_val = int(val)
+                else:
+                    raw_val = val
+            elif feat in raw and raw[feat] not in (None, ""):
+                val = raw[feat]
+                if isinstance(val, (float, np.floating)):
+                    raw_val = round(float(val), 1) if feat == "BMI" else round(float(val), 2)
+                else:
+                    raw_val = val
+            else:
+                raw_val = DEFAULTS.get(feat, "N/A")
+                if isinstance(raw_val, (float, np.floating)):
+                    raw_val = round(float(raw_val), 1) if feat == "BMI" else round(float(raw_val), 2)
+
             out.append(
                 {
                     "feature": feat,
