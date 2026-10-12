@@ -96,8 +96,10 @@ export function buildReport({
 
       if (cur !== undefined && cur !== null && cur !== "") {
         let displayVal = cur;
-        // C.6: Format Sex as Female instead of Fmale
-        if (f === "Sex") {
+        if (f === "BMI") {
+          const num = parseFloat(cur);
+          displayVal = isNaN(num) ? cur : num.toFixed(1);
+        } else if (f === "Sex") {
           displayVal = cur === "Fmale" ? "Female" : cur;
         } else if (typeof cur === "number" && (cur === 0 || cur === 1) && !["Age", "BP", "PR", "FBS", "TG", "LDL", "HDL", "CR", "BUN", "HB", "WBC", "PLT", "ESR", "K", "Na", "EF-TTE"].includes(f)) {
           displayVal = cur === 1 ? "Present" : "Absent";
@@ -110,7 +112,12 @@ export function buildReport({
         let whatIfFrom = null;
         if (isFieldModified) {
           let baseDisplay = base;
-          if (f === "Sex") baseDisplay = base === "Fmale" ? "Female" : base;
+          if (f === "BMI") {
+            const num = parseFloat(base);
+            baseDisplay = isNaN(num) ? base : num.toFixed(1);
+          } else if (f === "Sex") {
+            baseDisplay = base === "Fmale" ? "Female" : base;
+          }
           whatIfFrom = baseDisplay;
         }
 

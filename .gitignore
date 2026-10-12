@@ -1,26 +1,26 @@
-# Virtual environment
-venv/
-.venv/
-
-# ZIP / compressed project files
-3d_files.zip
-
-# Python cache
+# Build artefacts & dependencies
 __pycache__/
 *.pyc
 *.pyo
+node_modules/
+dist/
+build/
 
-# Environment / secrets
+# System noise
+.DS_Store
+Thumbs.db
+*.bak
+*.log
+
+# Environment & Virtualenvs
 .env
 .env.*
+.venv/
+venv/
 
-# VS Code
+# Archives & temp caches
+*.zip
+
+# IDEs
 .vscode/
-
-# Node.js dependencies
-node_modules/
-
-antigravity_specs/
-
-test_ml_model/
-
+.idea/

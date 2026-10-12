@@ -24,3 +24,9 @@ export async function postPredict(features) {
   }
   return r.json();
 }
+
+export async function getModelInfo() {
+  const r = await fetch(`${BASE}/model-info`);
+  if (!r.ok) throw new Error("Failed to load model performance info");
+  return r.json();
+}

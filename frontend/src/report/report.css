@@ -390,3 +390,12 @@
   display: flex;
   justify-content: space-between;
 }
+
+.report-disagree-note {
+  font-size: 7.5pt;
+  color: #666;
+  font-style: italic;
+  margin: 6px 0 0 0;
+  line-height: 1.3;
+}
+

@@ -14,6 +14,8 @@ import { useHistory } from "./history/historyStore";
 import ReportView from "./report/ReportView";
 import { buildReport } from "./report/buildReport";
 import { stamp } from "./report/utils";
+import ModelPerformanceModal from "./ModelPerformanceModal";
+import { formatFeatureName, formatFeatureValue } from "./featureDisplay";
 import "./App.css";
 
 const DEFAULT_REQUIRED = {
@@ -241,6 +243,7 @@ export default function App() {
   const [bpm, setBpm] = useState(72);
   const [isHeartHovered, setIsHeartHovered] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isModelModalOpen, setIsModelModalOpen] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState(false);
   const [reportData, setReportData] = useState(null);
   const { snapshots, addSnapshot } = useHistory();
@@ -503,7 +506,7 @@ export default function App() {
     ? "Updating…"
     : error
     ? "Result unavailable"
-    : "Opens your print dialog — choose Save as PDF";
+    : "Opens your print dialog — choose Save as PDF (in More settings, untick Headers and footers)";
 
   return (
     <div className="page">
@@ -519,6 +522,13 @@ export default function App() {
           <p className="sub">Cardiovascular Risk Visualizer</p>
         </div>
         <div className="topbar-actions">
+          <button
+            className="btn-model-topbar"
+            onClick={() => setIsModelModalOpen(true)}
+            title="View validation metrics, calibration, and methodology (Deliverable 3)"
+          >
+            Model performance
+          </button>
           <button
             className="btn-snapshot-topbar"
             disabled={!prediction || loading || isStale}
@@ -758,6 +768,11 @@ export default function App() {
               Results for LAD, LCX and RCA appear here once you select a patient.
             </div>
           )}
+          {prediction && (
+            <p className="vessel-disagree-note">
+              Overall CAD status and per-vessel stenosis are predicted by four independent models trained on separate labels. They can disagree.
+            </p>
+          )}
         </div>
 
         {activeVessel ? (
@@ -776,10 +791,10 @@ export default function App() {
                     ? "Present"
                     : f.value === 0 && ["Typical Chest Pain", "HTN", "DM", "Current Smoker", "FH", "Atypical"].includes(f.feature)
                     ? "Absent"
-                    : String(f.value);
+                    : formatFeatureValue(f.value, f.feature);
                 return (
                   <div className="shap-row" key={i}>
-                    <span className="f">{f.feature}</span>
+                    <span className="f">{formatFeatureName(f.feature)}</span>
                     <span className="v">{displayVal}</span>
                     <span className={`i ${neg ? "neg" : "pos"}`}>{f.impact}</span>
                     <div className="shap-bar-track">
@@ -812,6 +827,11 @@ export default function App() {
       <HistoryDrawer
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
+      />
+
+      <ModelPerformanceModal
+        isOpen={isModelModalOpen}
+        onClose={() => setIsModelModalOpen(false)}
       />
 
       {reportData &&

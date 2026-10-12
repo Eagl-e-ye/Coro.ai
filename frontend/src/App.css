@@ -977,3 +977,34 @@ body {
   border-color: var(--accent);
   transform: translateY(-1px);
 }
+
+.btn-model-topbar {
+  background: rgba(88, 166, 255, 0.12);
+  border: 1px solid rgba(88, 166, 255, 0.4);
+  color: #58a6ff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 99px;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: all 0.15s ease;
+}
+
+.btn-model-topbar:hover {
+  background: #388bfd;
+  color: #fff;
+  border-color: #388bfd;
+  transform: translateY(-1px);
+}
+
+
+.vessel-disagree-note {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+  margin: 10px 0 0 0;
+  line-height: 1.35;
+  text-align: left;
+}

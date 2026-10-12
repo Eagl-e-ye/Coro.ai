@@ -1,4 +1,5 @@
 import React from "react";
+import { formatFeatureName, formatFeatureValue } from "../featureDisplay";
 import "./report.css";
 
 export default function ReportView({ report }) {
@@ -79,6 +80,9 @@ export default function ReportView({ report }) {
                           })}
                         </tbody>
                       </table>
+                      <p className="report-disagree-note">
+                        Overall CAD status and per-vessel stenosis are predicted by four independent models trained on separate labels. They can disagree.
+                      </p>
                     </div>
 
                     {report.reference && (
@@ -126,7 +130,7 @@ export default function ReportView({ report }) {
                             return (
                               <li key={idx} className="report-driver-item">
                                 <span className="driver-feature">
-                                  <b>{f.feature}</b> ({String(f.value)}):
+                                  <b>{formatFeatureName(f.feature)}</b> ({formatFeatureValue(f.value, f.feature)}):
                                 </span>{" "}
                                 <span className={`driver-impact ${isNeg ? "impact-neg" : "impact-pos"}`}>
                                   {isNeg ? `${val.toFixed(2)}` : `+${val.toFixed(2)}`} ({directionWord})
